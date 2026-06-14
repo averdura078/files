@@ -1,0 +1,55 @@
+{
+  "name": "Player",
+  "energy": 0,
+  "oxygen_level": 1,
+  "filter_health": 1,
+  "heat_shield": 1,
+  "glass_integrity": 1,
+  "frame_integrity": 1,
+  "galaxy": "Milky Way",
+  "prev_galaxy": "Andromeda",
+  "engineering_progress": 0,
+  "chemistry_progress": 0,
+  "vaults_found": 0,
+  "vault_chance": 0.1,
+  "missions_completed": 0,
+  "inventory": {
+    "hydrogen": 3,
+    "oxygen": 3
+  },
+  "explore_tools": {
+    "binoculars": {
+      "level": 1,
+      "uses_left": 5,
+      "broken": false
+    },
+    "net": {
+      "level": 1,
+      "uses_left": 5,
+      "broken": false
+    },
+    "gas_filter": {
+      "level": 1,
+      "uses_left": 5,
+      "broken": false
+    },
+    "solar_panel": {
+      "level": 1,
+      "uses_left": 5,
+      "broken": false
+    }
+  },
+  "engineered_tools": {},
+  "chemistry_tools": {
+    "beaker": true,
+    "microscope": false,
+    "incubator": false,
+    "centrifuge": false
+  },
+  "current_experiments": [],
+  "completed_experiments": [],
+  "life_created_chem": false,
+  "life_discovered_explore": false,
+  "score": 0,
+  "high_score": 0
+}
