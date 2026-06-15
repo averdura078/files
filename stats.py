@@ -13,13 +13,14 @@ def run(player: Player):
         d.mini_hud(player)
 
         choice = d.choose(
-            ["Full Stats", "Inventory", "Exploration Tools", "Experiment Log"],
+            ["Player and Ship Stats", "Inventory",
+                "Exploration Tools", "Experiment Log"],
             title="Stats Menu"
         )
         if choice is None:
             return
 
-        if choice == "Full Stats":
+        if choice == "Player and Ship Stats":
             _full_stats(player)
         elif choice == "Inventory":
             _inventory(player)
@@ -58,7 +59,8 @@ def _full_stats(player: Player):
     ]
     print(d.c("  Ship Systems:", d.BRIGHT_WHITE))
     for name, val in systems:
-        icon = d.c("■ ONLINE", d.BRIGHT_GREEN) if val else d.c("■ OFFLINE", d.BRIGHT_RED)
+        icon = d.c("■ ONLINE", d.BRIGHT_GREEN) if val else d.c(
+            "■ OFFLINE", d.BRIGHT_RED)
         print(f"    {name.ljust(14)}: {icon}")
     print()
 
@@ -91,12 +93,6 @@ def _full_stats(player: Player):
 def _inventory(player: Player):
     d.section_header("Inventory", d.BRIGHT_MAGENTA)
 
-    if not player.inventory:
-        d.dim_line("Your inventory is empty. Go explore!")
-        d.pause()
-        return
-
-    # Separate into categories
     chemicals = ["hydrogen", "oxygen", "water", "nitrogen", "carbon_compounds",
                  "lipids", "mineral_samples", "saline_solution", "organic_compounds",
                  "amino_acids", "proteins", "cell_membranes", "stellar_dust", "plasma_extract"]
@@ -104,31 +100,15 @@ def _inventory(player: Player):
                  "crystal_compounds", "glass_shard"]
 
     def _print_category(title: str, items: list, color: str):
-        found_any = False
-        rows = []
+        print(d.c(f"  {title}:", color))
         for item in items:
             amt = player.get_item_count(item)
-            if amt > 0:
-                rows.append((item, amt))
-                found_any = True
-        if rows:
-            print(d.c(f"  {title}:", color))
-            for item, amt in rows:
-                print(f"    {d.c(str(amt).rjust(4), d.BRIGHT_GREEN)}  {ITEM_DISPLAY_NAMES.get(item, item)}")
-            print()
-        return found_any
+            amt_color = d.BRIGHT_GREEN if amt > 0 else d.DIM + d.WHITE
+            print(f"    {d.c(str(amt).rjust(4), amt_color)}  {ITEM_DISPLAY_NAMES.get(item, item)}")
+        print()
 
     _print_category("Chemicals", chemicals, d.BRIGHT_CYAN)
     _print_category("Materials", materials, d.BRIGHT_YELLOW)
-
-    # Anything else
-    all_known = set(chemicals + materials)
-    other = {k: v for k, v in player.inventory.items() if k not in all_known and v > 0}
-    if other:
-        print(d.c("  Other:", d.WHITE))
-        for item, amt in other.items():
-            print(f"    {d.c(str(amt).rjust(4), d.BRIGHT_GREEN)}  {ITEM_DISPLAY_NAMES.get(item, item)}")
-        print()
 
     d.pause()
 
@@ -138,7 +118,8 @@ def _tool_summary(player: Player):
 
     all_tools = player.all_explore_tools()
     if not all_tools:
-        d.dim_line("No tools. That shouldn't be possible — check the starter kit.")
+        d.dim_line(
+            "No tools. That shouldn't be possible — check the starter kit.")
         d.pause()
         return
 
@@ -146,10 +127,11 @@ def _tool_summary(player: Player):
     d.thin_divider()
     for name, tool in sorted(all_tools.items()):
         display = ITEM_DISPLAY_NAMES.get(name, name).ljust(22)
-        lvl   = str(tool["level"]).center(4)
-        uses  = str(tool["uses_left"]).center(5)
+        lvl = str(tool["level"]).center(4)
+        uses = str(tool["uses_left"]).center(5)
         status = d.tool_status_icon(tool["broken"])
-        print(f"  {d.c(display, d.BRIGHT_WHITE)}{d.c(lvl, d.BRIGHT_CYAN)}{d.c(uses, d.YELLOW)}  {status}")
+        print(
+            f"  {d.c(display, d.BRIGHT_WHITE)}{d.c(lvl, d.BRIGHT_CYAN)}{d.c(uses, d.YELLOW)}  {status}")
 
     print()
     d.dim_line("Tip: Repair broken tools in Engineering Lab.")
@@ -186,7 +168,8 @@ def _experiment_log(player: Player):
                 status = d.c("READY", d.BRIGHT_GREEN)
             else:
                 status = d.c(f"{checkins_left} check-in(s) left", d.YELLOW)
-            print(f"    {d.c('►', d.BRIGHT_YELLOW)} {e['display_name']}  — {status}")
+            print(
+                f"    {d.c('►', d.BRIGHT_YELLOW)} {e['display_name']}  — {status}")
         print()
 
     from constants import EXPERIMENTS, CHEM_UNLOCK_THRESHOLDS
@@ -210,7 +193,9 @@ def _experiment_log(player: Player):
                     lock_str = d.c("Unlocked — ready to start", d.BRIGHT_CYAN)
                 else:
                     needed = threshold - player.chemistry_progress
-                    lock_str = d.c(f"Locked — need {needed} more Chemistry XP", d.DIM + d.WHITE)
-                print(f"    {d.c('○', d.DIM + d.WHITE)} {exp['display_name']}  — {lock_str}")
+                    lock_str = d.c(
+                        f"Locked — need {needed} more Chemistry XP", d.DIM + d.WHITE)
+                print(
+                    f"    {d.c('○', d.DIM + d.WHITE)} {exp['display_name']}  — {lock_str}")
 
     d.pause()

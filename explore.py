@@ -10,7 +10,7 @@ from constants import (
     MISSIONS, BEST_TOOL, COMPATIBLE_TOOLS, BASE_SUCCESS_CHANCE,
     LEVEL_MULTIPLIER, WRONG_TOOL_MULTIPLIER, MISSION_YIELDS,
     STAR_ENERGY_BASE, DAMAGE_CHANCE_MW, DAMAGE_CHANCE_AND,
-    ANDROMEDA_YIELD_BONUS,
+    ANDROMEDA_YIELD_BONUS, MAX_ENERGY,
     PLANET_CRASH_CHANCE, GALAXY_TRAVEL_COST,
     VAULT_RARE_MATERIALS, VAULT_RARE_CHEMICALS, VAULT_ENERGY_RANGE,
     EXPLORE_WIN_GALAXY, EXPLORE_WIN_TOOL, EXPLORE_WIN_LEVEL,
@@ -105,11 +105,11 @@ def _choose_galaxy(player: Player):
     d.label("Current Galaxy", player.galaxy)
     print()
     d.info("Milky Way  — familiar and forgiving. Lower damage risk on failed missions (25%),")
-    d.info("             but modest rewards. A good place to build up your resources.")
+    print(d.c("    but modest rewards. A good place to build up your resources.", d.BRIGHT_CYAN))
     print()
     d.info("Andromeda  — uncharted and dangerous. Failed missions carry a 50% chance of")
-    d.info("             ship damage, but all yields — materials, chemicals, and XP — are")
-    d.info("             50% higher. Life can only be discovered here.")
+    print(d.c("    ship damage, but all yields — materials, chemicals, and XP — are", d.BRIGHT_CYAN))
+    print(d.c("    50% higher. Life can only be discovered here.", d.BRIGHT_CYAN))
     print()
 
     choice = d.choose_no_menu(["Milky Way", "Andromeda", "Stay in current galaxy"],
@@ -236,7 +236,7 @@ def _handle_success(player: Player, mission: str, tool_name: str,
     # ── Star: energy gain ───────────────────────────────────────────────
     if mission == "Star":
         energy_gained = int(STAR_ENERGY_BASE * multiplier) + (50 * galaxy_bonus)
-        player.energy += energy_gained
+        player.energy = min(MAX_ENERGY, player.energy + energy_gained)
         d.narrative(f"Your solar panels drank deep. +{energy_gained} energy replenished.")
         player.missions_completed += 1
         _progress_gain(player, mission, tool_name, galaxy_bonus)
@@ -492,7 +492,7 @@ def _open_vault(player: Player):
 
     # Energy bonus
     energy_bonus = random.randint(*VAULT_ENERGY_RANGE)
-    player.energy += energy_bonus
+    player.energy = min(MAX_ENERGY, player.energy + energy_bonus)
     loot.append(("energy", energy_bonus))
 
     # Rare: pre-built tool

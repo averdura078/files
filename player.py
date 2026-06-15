@@ -3,10 +3,21 @@ player.py - Player class and all associated state management.
 """
 import json
 import os
+import tempfile
 from constants import (
-    SAVE_FILE, STARTING_ENERGY, MAX_SHIP_HEALTH, GAME_OVER_HEALTH,
+    SAVE_FILE, STARTING_ENERGY, MAX_ENERGY, MAX_SHIP_HEALTH, GAME_OVER_HEALTH,
     STARTER_TOOL_USES, ENGINEERED_TOOL_USES
 )
+
+# Valid experiment keys — used to sanitise saves
+VALID_EXPERIMENTS = {
+    "water_synthesis", "saline_solution", "organic_compound_synthesis",
+    "amino_acid_synthesis", "protein_folding", "cell_membrane_synthesis",
+    "replication_attempt",
+}
+
+# Valid galaxy names
+VALID_GALAXIES = {"Milky Way", "Andromeda"}
 
 
 class Player:
@@ -31,18 +42,15 @@ class Player:
 
         # Vaults
         self.vaults_found: int = 0
-        self.vault_chance: float = 0.10   # 10% base chance in deep space
+        self.vault_chance: float = 0.10
 
         # Missions completed (for stats)
         self.missions_completed: int = 0
 
-        # Inventory: materials, chemicals, all tools
-        # Tools stored as dict: tool_name -> {"level": int, "uses_left": int, "broken": bool}
+        # Inventory
         self.inventory: dict = {
-            # Starting chemicals
             "hydrogen": 3,
             "oxygen": 3,
-            # Starting materials (none to start beyond explore tools)
         }
 
         # Exploration tools
@@ -53,10 +61,7 @@ class Player:
             "solar_panel": {"level": 1, "uses_left": STARTER_TOOL_USES, "broken": False},
         }
 
-        # Engineered exploration tools (unlocked via engineering lab)
-        # These start empty and are built in engineering lab
         self.engineered_tools: dict = {}
-        # e.g. "telescope": {"level": 1, "uses_left": ENGINEERED_TOOL_USES, "broken": False}
 
         # Chemistry lab state
         self.chemistry_tools: dict = {
@@ -65,14 +70,9 @@ class Player:
             "incubator": False,
             "centrifuge": False,
         }
-        # beaker starts owned (implied by starting chem setup)
         self.chemistry_tools["beaker"] = True
 
-        # Current experiments: list of dicts
-        # {"name": str, "checkins": int, "required_checkins": int, "status": str, "yield_penalty": float}
         self.current_experiments: list = []
-
-        # Completed experiments (names)
         self.completed_experiments: list = []
 
         # Life discovered flags
@@ -128,7 +128,6 @@ class Player:
     # ------------------------------------------------------------------ #
 
     def all_explore_tools(self) -> dict:
-        """Returns combined starter + engineered tools."""
         combined = {}
         combined.update(self.explore_tools)
         combined.update(self.engineered_tools)
@@ -154,11 +153,11 @@ class Player:
         if t["uses_left"] <= 0:
             t["broken"] = True
             t["uses_left"] = 0
-            return False   # False = broke this mission
+            return False
         return True
 
     def repair_tool(self, tool_name: str):
-        """Reset uses on a tool after paying repair cost."""
+        """Reset uses on a tool after paying repair cost. Only works if broken."""
         t = self.get_tool(tool_name)
         if t is None:
             return
@@ -259,44 +258,126 @@ class Player:
 
     @classmethod
     def from_dict(cls, data: dict) -> "Player":
-        p = cls(data["name"])
-        p.energy = data["energy"]
-        p.oxygen_level = data["oxygen_level"]
-        p.filter_health = data["filter_health"]
-        p.heat_shield = data["heat_shield"]
-        p.glass_integrity = data["glass_integrity"]
-        p.frame_integrity = data["frame_integrity"]
-        p.galaxy = data["galaxy"]
-        p.prev_galaxy = data["prev_galaxy"]
-        p.engineering_progress = data["engineering_progress"]
-        p.chemistry_progress = data["chemistry_progress"]
-        p.vaults_found = data["vaults_found"]
-        p.vault_chance = data["vault_chance"]
-        p.missions_completed = data.get("missions_completed", 0)
-        p.inventory = data["inventory"]
-        p.explore_tools = data["explore_tools"]
-        p.engineered_tools = data["engineered_tools"]
-        p.chemistry_tools = data["chemistry_tools"]
-        p.current_experiments = data["current_experiments"]
-        p.completed_experiments = data["completed_experiments"]
-        p.life_created_chem = data.get("life_created_chem", False)
-        p.life_discovered_explore = data.get("life_discovered_explore", False)
-        p.score = data.get("score", 0)
-        p.high_score = data.get("high_score", 0)
+        """
+        Load a player from a save dict. Validates and clamps all values
+        so a manually edited or corrupted save cannot crash the game.
+        """
+        # Sanitise name
+        raw_name = str(data.get("name", "Commander"))
+        name = "".join(ch for ch in raw_name if ch.isprintable()).strip()[:20] or "Commander"
+
+        p = cls(name)
+
+        # Clamp energy to valid range
+        p.energy = max(0, min(MAX_ENERGY, int(data.get("energy", STARTING_ENERGY))))
+
+        # Ship systems — must be 0 or 1
+        def _clamp_system(val) -> int:
+            return 1 if int(val) > 0 else 0
+
+        p.oxygen_level    = _clamp_system(data.get("oxygen_level", 1))
+        p.filter_health   = _clamp_system(data.get("filter_health", 1))
+        p.heat_shield     = _clamp_system(data.get("heat_shield", 1))
+        p.glass_integrity = _clamp_system(data.get("glass_integrity", 1))
+        p.frame_integrity = _clamp_system(data.get("frame_integrity", 1))
+
+        # Galaxy — must be a known value
+        p.galaxy      = data.get("galaxy", "Milky Way") if data.get("galaxy") in VALID_GALAXIES else "Milky Way"
+        p.prev_galaxy = data.get("prev_galaxy", "Milky Way") if data.get("prev_galaxy") in VALID_GALAXIES else "Milky Way"
+
+        # Progress — non-negative ints
+        p.engineering_progress = max(0, int(data.get("engineering_progress", 0)))
+        p.chemistry_progress   = max(0, int(data.get("chemistry_progress", 0)))
+
+        # Vaults
+        p.vaults_found = max(0, int(data.get("vaults_found", 0)))
+        p.vault_chance = max(0.0, min(1.0, float(data.get("vault_chance", 0.10))))
+
+        p.missions_completed = max(0, int(data.get("missions_completed", 0)))
+
+        # Inventory — keys and values must be strings/ints
+        raw_inv = data.get("inventory", {})
+        p.inventory = {str(k): max(0, int(v)) for k, v in raw_inv.items()
+                       if isinstance(k, str) and str(v).lstrip("-").isdigit()}
+
+        # Exploration tools — validate structure of each tool entry
+        def _sanitise_tool(t) -> dict:
+            if not isinstance(t, dict):
+                return {"level": 1, "uses_left": STARTER_TOOL_USES, "broken": False}
+            return {
+                "level":     max(1, min(3, int(t.get("level", 1)))),
+                "uses_left": max(0, int(t.get("uses_left", STARTER_TOOL_USES))),
+                "broken":    bool(t.get("broken", False)),
+            }
+
+        raw_et = data.get("explore_tools", {})
+        p.explore_tools = {k: _sanitise_tool(v) for k, v in raw_et.items()
+                           if isinstance(k, str)}
+        # Ensure starter tools always exist
+        for tool in ("binoculars", "net", "gas_filter", "solar_panel"):
+            if tool not in p.explore_tools:
+                p.explore_tools[tool] = {"level": 1, "uses_left": STARTER_TOOL_USES, "broken": False}
+
+        raw_eng = data.get("engineered_tools", {})
+        p.engineered_tools = {k: _sanitise_tool(v) for k, v in raw_eng.items()
+                               if isinstance(k, str)}
+
+        # Chemistry tools — must be bool
+        raw_ct = data.get("chemistry_tools", {})
+        p.chemistry_tools = {
+            "beaker":     bool(raw_ct.get("beaker", True)),
+            "microscope": bool(raw_ct.get("microscope", False)),
+            "incubator":  bool(raw_ct.get("incubator", False)),
+            "centrifuge": bool(raw_ct.get("centrifuge", False)),
+        }
+
+        # Experiments — strip any unknown experiment keys
+        raw_curr = data.get("current_experiments", [])
+        p.current_experiments = [e for e in raw_curr
+                                  if isinstance(e, dict) and e.get("name") in VALID_EXPERIMENTS]
+        raw_comp = data.get("completed_experiments", [])
+        p.completed_experiments = [e for e in raw_comp
+                                    if isinstance(e, str) and e in VALID_EXPERIMENTS]
+
+        p.life_created_chem     = bool(data.get("life_created_chem", False))
+        p.life_discovered_explore = bool(data.get("life_discovered_explore", False))
+
+        p.score      = max(0, int(data.get("score", 0)))
+        p.high_score = max(0, int(data.get("high_score", 0)))
         return p
 
 
 def save_game(player: Player):
-    with open(SAVE_FILE, "w") as f:
-        json.dump(player.to_dict(), f, indent=2)
+    """
+    Atomically write save data: write to a temp file first, then rename.
+    This prevents corruption if the process is killed mid-write, and
+    prevents two simultaneous instances from interleaving their writes.
+    """
+    try:
+        dir_name = os.path.dirname(os.path.abspath(SAVE_FILE)) or "."
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=dir_name, suffix=".tmp", delete=False
+        ) as tf:
+            json.dump(player.to_dict(), tf, indent=2)
+            tmp_path = tf.name
+        os.replace(tmp_path, SAVE_FILE)
+    except Exception:
+        # Never crash the game because of a save failure
+        pass
 
 
 def load_game() -> Player | None:
+    """Load and validate save file. Returns None on any error."""
     if not os.path.exists(SAVE_FILE):
         return None
-    with open(SAVE_FILE, "r") as f:
-        data = json.load(f)
-    return Player.from_dict(data)
+    try:
+        with open(SAVE_FILE, "r") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return None
+        return Player.from_dict(data)
+    except Exception:
+        return None
 
 
 def save_exists() -> bool:

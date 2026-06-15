@@ -215,13 +215,18 @@ def typewrite(text: str, delay: float = 0.018, color: str = WHITE):
     never wrap individual characters, which floods the terminal with escape
     sequences and causes a visible stutter/instant-dump bug on longer strings.
     """
-    sys.stdout.write(color)
-    for ch in text:
-        sys.stdout.write(ch)
+    try:
+        sys.stdout.write(color)
+        for ch in text:
+            sys.stdout.write(ch)
+            sys.stdout.flush()
+            time.sleep(delay)
+        sys.stdout.write(RESET + "\n")
         sys.stdout.flush()
-        time.sleep(delay)
-    sys.stdout.write(RESET + "\n")
-    sys.stdout.flush()
+    except (KeyboardInterrupt, EOFError):
+        # Print the rest of the line instantly so layout doesn't break
+        sys.stdout.write(RESET + "\n")
+        sys.stdout.flush()
 
 
 def narrative(text: str, delay: float = 0.012):
@@ -237,7 +242,10 @@ def narrative(text: str, delay: float = 0.012):
 
 def pause(msg: str = "Press Enter to continue..."):
     print()
-    input(c(f"  [{msg}]", DIM, WHITE))
+    try:
+        input(c(f"  [{msg}]", DIM, WHITE))
+    except (KeyboardInterrupt, EOFError):
+        print()
 
 # ── Status bars ────────────────────────────────────────────────────────────────
 
@@ -252,13 +260,13 @@ def health_bar(current: int, maximum: int = 5, width: int = 10) -> str:
         color = BRIGHT_RED
     return c(f"[{bar}]", color) + c(f" {current}/{maximum}", BOLD, color)
 
-def energy_bar(current: int, maximum: int = 1000, width: int = 10) -> str:
+def energy_bar(current: int, maximum: int = 2000, width: int = 10) -> str:
     clamped = max(0, min(current, maximum))
     filled = int((clamped / maximum) * width)
     bar = "█" * filled + "░" * (width - filled)
-    if clamped > 600:
+    if clamped > 1200:
         color = BRIGHT_CYAN
-    elif clamped > 300:
+    elif clamped > 600:
         color = BRIGHT_YELLOW
     else:
         color = BRIGHT_RED

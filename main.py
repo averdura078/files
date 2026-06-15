@@ -33,7 +33,10 @@ def startup() -> Player:
 
     name = ""
     while not name:
-        name = d.prompt_raw(f"What is your name, Commander? (max {MAX_NAME_LENGTH} chars)")
+        raw = d.prompt_raw(
+            f"What is your name, Commander? (max {MAX_NAME_LENGTH} chars)")
+        # Strip non-printable characters and leading/trailing whitespace
+        name = "".join(ch for ch in raw if ch.isprintable()).strip()
         if not name:
             d.error("You'll need a name for the mission logs.")
         elif len(name) > MAX_NAME_LENGTH:
@@ -81,7 +84,8 @@ def death_screen(player: Player, reason: str) -> bool:
     print()
 
     choice = d.choose_no_menu(
-        ["Respawn (restart with same name, all progress reset)", "Exit to desktop"],
+        ["Respawn (restart with same name, all progress reset)",
+         "Exit to desktop"],
         title="What would you like to do?"
     )
     if choice.startswith("Respawn"):
@@ -140,7 +144,8 @@ def game_loop(player: Player):
 
         if destination == "quit":
             d.clear()
-            d.narrative("The stars drift past as your ship goes into standby. Until next time, Commander.")
+            d.narrative(
+                "The stars drift past as your ship goes into standby. Until next time, Commander.")
             d.pause("Press Enter to exit")
             sys.exit(0)
 
@@ -184,6 +189,7 @@ def game_loop(player: Player):
 
 
 def main():
+    player = None
     try:
         player = startup()
         game_loop(player)
@@ -191,8 +197,11 @@ def main():
         print()
         d.warn("Game interrupted. Saving...")
         try:
-            save_game(player)
-            d.success("Saved. Goodbye, Commander.")
+            if player is not None:
+                save_game(player)
+                d.success("Saved. Goodbye, Commander.")
+            else:
+                d.info("Goodbye.")
         except Exception:
             d.error("Could not save. Goodbye.")
         sys.exit(0)

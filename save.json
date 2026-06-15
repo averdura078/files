@@ -1,32 +1,37 @@
 {
-  "name": "Player",
-  "energy": 0,
+  "name": "Rocky",
+  "energy": 1000,
   "oxygen_level": 1,
   "filter_health": 1,
   "heat_shield": 1,
   "glass_integrity": 1,
   "frame_integrity": 1,
   "galaxy": "Milky Way",
-  "prev_galaxy": "Andromeda",
-  "engineering_progress": 0,
-  "chemistry_progress": 0,
+  "prev_galaxy": "Milky Way",
+  "engineering_progress": 18,
+  "chemistry_progress": 5,
   "vaults_found": 0,
   "vault_chance": 0.1,
-  "missions_completed": 0,
+  "missions_completed": 9,
   "inventory": {
-    "hydrogen": 3,
-    "oxygen": 3
+    "hydrogen": 1,
+    "oxygen": 2,
+    "iron_ore": 6,
+    "silicon": 3,
+    "glass_shard": 1,
+    "water": 3,
+    "plasma_extract": 3
   },
   "explore_tools": {
     "binoculars": {
       "level": 1,
-      "uses_left": 5,
+      "uses_left": 4,
       "broken": false
     },
     "net": {
       "level": 1,
-      "uses_left": 5,
-      "broken": false
+      "uses_left": 0,
+      "broken": true
     },
     "gas_filter": {
       "level": 1,
@@ -35,7 +40,7 @@
     },
     "solar_panel": {
       "level": 1,
-      "uses_left": 5,
+      "uses_left": 2,
       "broken": false
     }
   },
@@ -47,9 +52,11 @@
     "centrifuge": false
   },
   "current_experiments": [],
-  "completed_experiments": [],
+  "completed_experiments": [
+    "water_synthesis"
+  ],
   "life_created_chem": false,
   "life_discovered_explore": false,
   "score": 0,
-  "high_score": 0
+  "high_score": 40
 }

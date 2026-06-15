@@ -7,6 +7,7 @@ SAVE_FILE = "save.json"
 
 # ── Energy ────────────────────────────────────────────────────────────────────
 STARTING_ENERGY = 1000
+MAX_ENERGY = 2000
 GALAXY_TRAVEL_COST = 500
 NEW_EXPERIMENT_COST = 75
 BUILD_TOOL_BASE_COST = 150      # engineering build cost (energy)
